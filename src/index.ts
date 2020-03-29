@@ -84,3 +84,7 @@ export function quote(symbol : string) : Promise<Quote> {
     throw new Error(`Symbol ${symbol} was not found`)
   }})
 } 
+
+export default {
+  quote : quote
+}
