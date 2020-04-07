@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "description": "Library for getting data from yahoo finance with typescript types for ease of exploration and use",
   "main": "dist/index.js",
- "types" : "dist/index.d.ts",
+  "types": "dist/index.d.ts",
   "scripts": {
-   "build": "tsc"
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/pwestling/yahoo-finance-client-ts#readme",
   "dependencies": {
-    "axios": "^0.19.2"
+    "axios": "^0.19.2",
+    "moment": "^2.24.0"
   }
 }
