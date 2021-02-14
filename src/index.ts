@@ -161,7 +161,7 @@ export default class YahooFinance {
             expirationString: moment
               .unix(e)
               .utc()
-              .format("MM/DD"),
+              .format("MM/DD/YYYY"),
             expirationTimestamp: e
           })),
           strikes: results[0].strikes as number[]
