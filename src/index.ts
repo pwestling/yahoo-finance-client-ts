@@ -1,5 +1,6 @@
 import axios from "axios";
 import moment from "moment";
+import {BSHolder, BS} from "./blackscholes"
 
 interface QuoteResponse {
   result: Quote[];
@@ -22,6 +23,14 @@ export interface ContractData {
   lastTradeDate?: number;
   impliedVolatility?: number;
   inTheMoney?: boolean;
+  delta?: number;
+  theta?: number;
+  vega?: number;
+  gamma?: number;
+  rho?: number;
+  optionType?: OptionType;
+  leverage?: number;
+  priceForIV?(newIV?: number, newUnderlying?: number): number
 }
 
 export interface ContractDataByStrike {
@@ -108,6 +117,11 @@ export interface Quote {
   symbol?: string;
 }
 
+export enum OptionType {
+  Call = "call",
+  Put = "put"
+}
+
 function makeLookup(data: ContractData[]): ContractDataByStrike {
   let result = {} as ContractDataByStrike;
   data.forEach(contract => {
@@ -116,6 +130,32 @@ function makeLookup(data: ContractData[]): ContractDataByStrike {
     }
   });
   return result;
+}
+
+function addStats(quote: Quote, data: ContractData[], optionType: OptionType){
+  if(data.length > 0){
+    let first = data[0]
+    let now = moment();
+    let expiry = moment.unix(first.expiration || 0)
+    let dte = moment.duration(expiry.diff(now)).asDays();
+    let price = quote.regularMarketPrice || 0
+    data.forEach(contract => {
+      const bs = BSHolder(price, contract.strike || 0, 0, (contract.impliedVolatility || 0), dte/365, optionType)
+      contract.delta = BS.delta(bs)
+      contract.gamma = BS.gamma(bs)
+      contract.vega = BS.vega(bs)
+      contract.theta = BS.theta(bs)
+      contract.rho = BS.rho(bs)
+      contract.optionType = optionType
+      contract.leverage = Math.abs(((contract.delta || 0) * price) / (contract.lastPrice || 1))
+      contract.priceForIV = (newIV?: number, newUnderlying?: number) => {
+        let newbs = BSHolder(newUnderlying || price, contract.strike || 0, 0, newIV || contract.impliedVolatility, dte/365, optionType)
+        return BS.bsPrice(newbs)
+      }
+    });
+  }
+
+  return data
 }
 
 export default class YahooFinance {
@@ -137,18 +177,19 @@ export default class YahooFinance {
   }
 
   options(symbol: string, expiration: number): Promise<OptionChain> {
-    return axios
+    return this.quote(symbol).then(quote => {
+      return axios
       .get(`${this.queryUrl}/options/${symbol}?date=${expiration}`)
       .then(res => {
         let results = res.data.optionChain.result;
         if (results.length > 0) {
           let calls = results[0].options[0].calls as ContractData[];
           let puts = results[0].options[0].puts as ContractData[];
-          return { call: makeLookup(calls), put: makeLookup(puts) };
+          return { call: makeLookup(addStats(quote, calls, OptionType.Call)), put: makeLookup(addStats(quote, puts, OptionType.Put)) };
         } else {
           throw new Error(`Symbol ${symbol} was not found`);
         }
-      });
+      })});
   }
 
   optionMeta(symbol: string): Promise<OptionMeta> {
