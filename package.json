@@ -24,6 +24,6 @@
   "homepage": "https://github.com/pwestling/yahoo-finance-client-ts#readme",
   "dependencies": {
     "axios": "^0.19.2",
-    "moment": "^2.24.0"
+    "moment": "^2.29.4"
   }
 }
